@@ -95,10 +95,10 @@
                     </div>
                 </div>
 
-                <!-- CONECTORES Y SPRUES CORREGIDOS -->
+                <!-- CONECTORES INTELIGENTES POR FORMA/ISLA -->
                 <div class="space-y-4 border-t border-slate-700/60 pt-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Conectores Precisos</h3>
+                        <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Análisis de Conectores</h3>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="enable-sprues" checked class="sr-only peer">
                             <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
@@ -116,9 +116,9 @@
                             <input type="range" id="sprue-depth" min="30" max="100" step="5" value="60" class="w-full">
                         </div>
 
-                        <div>
-                            <div class="flex justify-between text-xs text-slate-300 mb-1"><span>Puentes Horizontales de Soporte</span><span id="val-horiz-bridges">2</span></div>
-                            <input type="range" id="horiz-bridges" min="0" max="5" step="1" value="2" class="w-full">
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-xs text-slate-300">Conectar Letras Entre Sí</span>
+                            <input type="checkbox" id="connect-neighbors" checked class="accent-blue-600 rounded">
                         </div>
 
                         <div>
@@ -149,7 +149,7 @@
             <div class="self-end glass-panel rounded-xl p-4 pointer-events-auto text-xs text-slate-300 space-y-1">
                 <div><span class="text-slate-400">Dimensiones Totales:</span> <span id="spec-dim">160 x 80 x 2.0 mm</span></div>
                 <div><span class="text-slate-400">Modo:</span> <span id="spec-mode">Texto Paramétrico</span></div>
-                <div><span class="text-slate-400">Conectores:</span> <span id="spec-sprues" class="text-emerald-400">Activos</span></div>
+                <div><span class="text-slate-400">Conectores:</span> <span id="spec-sprues" class="text-emerald-400">Análisis Activo</span></div>
                 <div><span class="text-slate-400">Tiempo estimado:</span> <span class="text-emerald-400">~35 mins</span></div>
             </div>
         </div>
@@ -231,7 +231,7 @@
                 updateModel();
             });
 
-            const inputs = ['card-w', 'card-h', 'thickness', 'border-w', 'sprue-w', 'sprue-depth', 'horiz-bridges', 'svg-scale', 'input-text', 'color-frame', 'color-part', 'enable-sprues'];
+            const inputs = ['card-w', 'card-h', 'thickness', 'border-w', 'sprue-w', 'sprue-depth', 'connect-neighbors', 'svg-scale', 'input-text', 'color-frame', 'color-part', 'enable-sprues'];
             inputs.forEach(id => {
                 document.getElementById(id).addEventListener('input', () => {
                     syncLabels();
@@ -251,14 +251,13 @@
             document.getElementById('val-border').textContent = document.getElementById('border-w').value + ' mm';
             document.getElementById('val-sprue-w').textContent = parseFloat(document.getElementById('sprue-w').value).toFixed(1) + ' mm';
             document.getElementById('val-sprue-depth').textContent = document.getElementById('sprue-depth').value + '%';
-            document.getElementById('val-horiz-bridges').textContent = document.getElementById('horiz-bridges').value;
             document.getElementById('val-svg-scale').textContent = parseFloat(document.getElementById('svg-scale').value).toFixed(2);
             document.getElementById('spec-dim').textContent = `${document.getElementById('card-w').value} x ${document.getElementById('card-h').value} x ${document.getElementById('thickness').value} mm`;
 
             const spruesEnabled = document.getElementById('enable-sprues').checked;
             document.getElementById('sprue-controls').style.opacity = spruesEnabled ? "1" : "0.4";
             document.getElementById('sprue-controls').style.pointerEvents = spruesEnabled ? "auto" : "none";
-            document.getElementById('spec-sprues').textContent = spruesEnabled ? "Activos" : "Desactivados";
+            document.getElementById('spec-sprues').textContent = spruesEnabled ? "Análisis Activo" : "Desactivados";
             document.getElementById('spec-sprues').className = spruesEnabled ? "text-emerald-400" : "text-amber-400";
         }
 
@@ -283,6 +282,13 @@
             reader.readAsText(file);
         }
 
+        function createSprueMesh(w, h, depth, px, py, pz, mat) {
+            const geo = new THREE.BoxGeometry(w, h, depth);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(px, py, pz);
+            return mesh;
+        }
+
         function updateModel() {
             while (mainMeshGroup.children.length > 0) {
                 mainMeshGroup.remove(mainMeshGroup.children[0]);
@@ -294,7 +300,7 @@
             const borderW = parseFloat(document.getElementById('border-w').value);
             const sprueW = parseFloat(document.getElementById('sprue-w').value);
             const sprueDepthPct = parseFloat(document.getElementById('sprue-depth').value) / 100;
-            const horizBridges = parseInt(document.getElementById('horiz-bridges').value);
+            const connectNeighbors = document.getElementById('connect-neighbors').checked;
             const spruesEnabled = document.getElementById('enable-sprues').checked;
             const userScale = parseFloat(document.getElementById('svg-scale').value);
 
@@ -326,7 +332,10 @@
             const frameGeo = new THREE.ExtrudeGeometry(frameShape, { depth: thickness, bevelEnabled: false });
             mainMeshGroup.add(new THREE.Mesh(frameGeo, matFrame));
 
-            // 2. Renderizar Contenido
+            // Lista para almacenar el Bounding Box de cada isla/forma analizada
+            let subIslands = [];
+
+            // 2. Renderizar Texto
             if (mode === 'text' && loadedFont) {
                 const textVal = document.getElementById('input-text').value.toUpperCase() || "MAKER";
                 const letterCount = textVal.length;
@@ -355,39 +364,18 @@
                     textMesh.position.set(posX, posY, 0);
                     mainMeshGroup.add(textMesh);
 
-                    // Pestañas verticales ajustadas exactas por letra
-                    if (spruesEnabled) {
-                        const sprueTopH = (innerH / 2) - (posY + charH);
-                        const sprueBotH = (posY) - (-innerH / 2);
-
-                        const topSprueGeo = new THREE.BoxGeometry(sprueW, sprueTopH + 1, sprueZHeight);
-                        const topSprueMesh = new THREE.Mesh(topSprueGeo, matSprue);
-                        topSprueMesh.position.set(posX + charW / 2, innerH / 2 - sprueTopH / 2, sprueZHeight / 2);
-                        mainMeshGroup.add(topSprueMesh);
-
-                        const botSprueGeo = new THREE.BoxGeometry(sprueW, sprueBotH + 1, sprueZHeight);
-                        const botSprueMesh = new THREE.Mesh(botSprueGeo, matSprue);
-                        botSprueMesh.position.set(posX + charW / 2, -innerH / 2 + sprueBotH / 2, sprueZHeight / 2);
-                        mainMeshGroup.add(botSprueMesh);
-                    }
+                    subIslands.push({
+                        minX: posX,
+                        maxX: posX + charW,
+                        minY: posY,
+                        maxY: posY + charH,
+                        centerX: posX + charW / 2,
+                        centerY: posY + charH / 2
+                    });
                 });
 
             } else if (mode === 'svg' && currentSVGShapes && currentSVGShapes.length > 0) {
-                
-                // Múltiples piezas dentro del SVG
-                currentSVGShapes.forEach(shape => {
-                    const singleGeo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
-                    singleGeo.computeBoundingBox();
-                    const bbox = singleGeo.boundingBox;
-                    
-                    if (!bbox) return;
-
-                    const size = new THREE.Vector3();
-                    bbox.getSize(size);
-
-                    // Normalizar e importar SVG completo
-                });
-
+                // Renderizar y Analizar Forma SVG por Forma/Isla
                 const fullSvgGeo = new THREE.ExtrudeGeometry(currentSVGShapes, { depth: thickness, bevelEnabled: false });
                 fullSvgGeo.computeBoundingBox();
                 const bbox = fullSvgGeo.boundingBox;
@@ -405,37 +393,87 @@
                 svgMesh.position.set(-center.x * scaleFactor, center.y * scaleFactor, 0);
                 mainMeshGroup.add(svgMesh);
 
-                // --- CONECTORES EXACTOS PARA SVG COMPLEJO ---
-                if (spruesEnabled) {
-                    const topEdgeSVG = (size.y / 2) * scaleFactor;
-                    const botEdgeSVG = (-size.y / 2) * scaleFactor;
+                // Analizar cada Shape (sub-isla o letra dentro del SVG)
+                currentSVGShapes.forEach((shape) => {
+                    const singleGeo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
+                    singleGeo.computeBoundingBox();
+                    const sBox = singleGeo.boundingBox;
+                    if (!sBox) return;
 
-                    const distTopFrame = (innerH / 2) - topEdgeSVG;
-                    const distBotFrame = (-innerH / 2) - botEdgeSVG;
+                    // Mapear coordenadas con la escala y posición del contenedor
+                    const minX = (sBox.min.x - center.x) * scaleFactor;
+                    const maxX = (sBox.max.x - center.x) * scaleFactor;
+                    const minY = -(sBox.max.y - center.y) * scaleFactor;
+                    const maxY = -(sBox.min.y - center.y) * scaleFactor;
 
-                    // Pestaña superior exacta que toca la pieza
-                    const topSprueGeo = new THREE.BoxGeometry(sprueW, Math.max(distTopFrame + 2, 2), sprueZHeight);
-                    const topSprue = new THREE.Mesh(topSprueGeo, matSprue);
-                    topSprue.position.set(0, innerH / 2 - distTopFrame / 2, sprueZHeight / 2);
-                    mainMeshGroup.add(topSprue);
-
-                    // Pestaña inferior exacta que toca la pieza
-                    const botSprueGeo = new THREE.BoxGeometry(sprueW, Math.max(Math.abs(distBotFrame) + 2, 2), sprueZHeight);
-                    const botSprue = new THREE.Mesh(botSprueGeo, matSprue);
-                    botSprue.position.set(0, -innerH / 2 + Math.abs(distBotFrame) / 2, sprueZHeight / 2);
-                    mainMeshGroup.add(botSprue);
-                }
+                    subIslands.push({
+                        minX: Math.min(minX, maxX),
+                        maxX: Math.max(minX, maxX),
+                        minY: Math.min(minY, maxY),
+                        maxY: Math.max(minY, maxY),
+                        centerX: (minX + maxX) / 2,
+                        centerY: (minY + maxY) / 2
+                    });
+                });
             }
 
-            // --- PUENTES HORIZONTALES DE UNIÓN ENTRE PIEZAS SUELTAS ---
-            if (spruesEnabled && horizBridges > 0) {
-                const spacingY = innerH / (horizBridges + 1);
-                for (let i = 1; i <= horizBridges; i++) {
-                    const bridgeY = -innerH / 2 + spacingY * i;
-                    const bridgeGeo = new THREE.BoxGeometry(innerW + 2, sprueW, sprueZHeight);
-                    const bridgeMesh = new THREE.Mesh(bridgeGeo, matSprue);
-                    bridgeMesh.position.set(0, bridgeY, sprueZHeight / 2);
-                    mainMeshGroup.add(bridgeMesh);
+            // 3. GENERACIÓN INTELIGENTE DE CONECTORES POR ISLA / LETRA
+            if (spruesEnabled && subIslands.length > 0) {
+                
+                // A) Pestañas verticales inteligentes desde cada letra/isla hacia el marco
+                subIslands.forEach((isl) => {
+                    // Pestaña Superior
+                    const topDist = (innerH / 2) - isl.maxY;
+                    if (topDist > 0) {
+                        mainMeshGroup.add(createSprueMesh(
+                            sprueW,
+                            topDist + 1,
+                            sprueZHeight,
+                            isl.centerX,
+                            innerH / 2 - topDist / 2,
+                            sprueZHeight / 2,
+                            matSprue
+                        ));
+                    }
+
+                    // Pestaña Inferior
+                    const botDist = isl.minY - (-innerH / 2);
+                    if (botDist > 0) {
+                        mainMeshGroup.add(createSprueMesh(
+                            sprueW,
+                            botDist + 1,
+                            sprueZHeight,
+                            isl.centerX,
+                            -innerH / 2 + botDist / 2,
+                            sprueZHeight / 2,
+                            matSprue
+                        ));
+                    }
+                });
+
+                // B) Conectar letras/islas vecinas entre sí (Horizontalmente)
+                if (connectNeighbors && subIslands.length > 1) {
+                    // Ordenar islas de izquierda a derecha
+                    subIslands.sort((a, b) => a.minX - b.minX);
+
+                    for (let i = 0; i < subIslands.length - 1; i++) {
+                        const curr = subIslands[i];
+                        const next = subIslands[i + 1];
+
+                        const gap = next.minX - curr.maxX;
+                        if (gap > 0 && gap < innerW * 0.4) {
+                            const bridgeY = (curr.centerY + next.centerY) / 2;
+                            mainMeshGroup.add(createSprueMesh(
+                                gap + 1,
+                                sprueW,
+                                sprueZHeight,
+                                curr.maxX + gap / 2,
+                                bridgeY,
+                                sprueZHeight / 2,
+                                matSprue
+                            ));
+                        }
+                    }
                 }
             }
         }
