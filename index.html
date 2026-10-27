@@ -95,10 +95,10 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN DE CONECTORES Y SPRUES -->
+                <!-- CONECTORES Y SPRUES CORREGIDOS -->
                 <div class="space-y-4 border-t border-slate-700/60 pt-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Conectores Automáticos</h3>
+                        <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Conectores Precisos</h3>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="enable-sprues" checked class="sr-only peer">
                             <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
@@ -107,33 +107,24 @@
 
                     <div id="sprue-controls" class="space-y-4">
                         <div>
-                            <label class="text-xs text-slate-300 block mb-1">Disposición de Conectores</label>
-                            <select id="sprue-mode" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                                <option value="auto">Automático por Pieza / Letra</option>
-                                <option value="cross">Red de Cruz Global</option>
-                                <option value="both">Híbrido (Piezas + Cruz)</option>
-                            </select>
-                        </div>
-
-                        <div>
                             <div class="flex justify-between text-xs text-slate-300 mb-1"><span>Ancho del Conector</span><span id="val-sprue-w">1.5 mm</span></div>
                             <input type="range" id="sprue-w" min="0.8" max="3.5" step="0.1" value="1.5" class="w-full">
                         </div>
 
                         <div>
-                            <div class="flex justify-between text-xs text-slate-300 mb-1"><span>Profundidad de Rompimiento (Snap %):</span><span id="val-sprue-depth">60%</span></div>
+                            <div class="flex justify-between text-xs text-slate-300 mb-1"><span>Profundidad Snap (Rompimiento):</span><span id="val-sprue-depth">60%</span></div>
                             <input type="range" id="sprue-depth" min="30" max="100" step="5" value="60" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs text-slate-300 mb-1"><span>Puentes Horizontales de Soporte</span><span id="val-horiz-bridges">2</span></div>
+                            <input type="range" id="horiz-bridges" min="0" max="5" step="1" value="2" class="w-full">
                         </div>
 
                         <div>
                             <div class="flex justify-between text-xs text-slate-300 mb-1"><span>Escala de Piezas</span><span id="val-svg-scale">1.0</span></div>
                             <input type="range" id="svg-scale" min="0.5" max="1.5" step="0.05" value="1" class="w-full">
                         </div>
-
-                        <button id="btn-recalc-sprues" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 border border-blue-500/30 font-medium py-1.5 rounded-lg text-xs transition flex items-center justify-center space-x-1">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            <span>Regenerar Conectores</span>
-                        </button>
                     </div>
                 </div>
 
@@ -158,7 +149,7 @@
             <div class="self-end glass-panel rounded-xl p-4 pointer-events-auto text-xs text-slate-300 space-y-1">
                 <div><span class="text-slate-400">Dimensiones Totales:</span> <span id="spec-dim">160 x 80 x 2.0 mm</span></div>
                 <div><span class="text-slate-400">Modo:</span> <span id="spec-mode">Texto Paramétrico</span></div>
-                <div><span class="text-slate-400">Conectores:</span> <span id="spec-sprues" class="text-emerald-400">Activos (Auto)</span></div>
+                <div><span class="text-slate-400">Conectores:</span> <span id="spec-sprues" class="text-emerald-400">Activos</span></div>
                 <div><span class="text-slate-400">Tiempo estimado:</span> <span class="text-emerald-400">~35 mins</span></div>
             </div>
         </div>
@@ -240,7 +231,7 @@
                 updateModel();
             });
 
-            const inputs = ['card-w', 'card-h', 'thickness', 'border-w', 'sprue-w', 'sprue-depth', 'sprue-mode', 'svg-scale', 'input-text', 'color-frame', 'color-part', 'enable-sprues'];
+            const inputs = ['card-w', 'card-h', 'thickness', 'border-w', 'sprue-w', 'sprue-depth', 'horiz-bridges', 'svg-scale', 'input-text', 'color-frame', 'color-part', 'enable-sprues'];
             inputs.forEach(id => {
                 document.getElementById(id).addEventListener('input', () => {
                     syncLabels();
@@ -248,7 +239,6 @@
                 });
             });
 
-            document.getElementById('btn-recalc-sprues').addEventListener('click', updateModel);
             document.getElementById('input-svg-file').addEventListener('change', handleSVGUpload);
             document.getElementById('btn-export-stl').addEventListener('click', exportSTL);
             document.getElementById('btn-export-scad').addEventListener('click', exportOpenSCAD);
@@ -261,13 +251,14 @@
             document.getElementById('val-border').textContent = document.getElementById('border-w').value + ' mm';
             document.getElementById('val-sprue-w').textContent = parseFloat(document.getElementById('sprue-w').value).toFixed(1) + ' mm';
             document.getElementById('val-sprue-depth').textContent = document.getElementById('sprue-depth').value + '%';
+            document.getElementById('val-horiz-bridges').textContent = document.getElementById('horiz-bridges').value;
             document.getElementById('val-svg-scale').textContent = parseFloat(document.getElementById('svg-scale').value).toFixed(2);
             document.getElementById('spec-dim').textContent = `${document.getElementById('card-w').value} x ${document.getElementById('card-h').value} x ${document.getElementById('thickness').value} mm`;
 
             const spruesEnabled = document.getElementById('enable-sprues').checked;
             document.getElementById('sprue-controls').style.opacity = spruesEnabled ? "1" : "0.4";
             document.getElementById('sprue-controls').style.pointerEvents = spruesEnabled ? "auto" : "none";
-            document.getElementById('spec-sprues').textContent = spruesEnabled ? "Activos (" + document.getElementById('sprue-mode').value + ")" : "Desactivados";
+            document.getElementById('spec-sprues').textContent = spruesEnabled ? "Activos" : "Desactivados";
             document.getElementById('spec-sprues').className = spruesEnabled ? "text-emerald-400" : "text-amber-400";
         }
 
@@ -303,7 +294,7 @@
             const borderW = parseFloat(document.getElementById('border-w').value);
             const sprueW = parseFloat(document.getElementById('sprue-w').value);
             const sprueDepthPct = parseFloat(document.getElementById('sprue-depth').value) / 100;
-            const sprueMode = document.getElementById('sprue-mode').value;
+            const horizBridges = parseInt(document.getElementById('horiz-bridges').value);
             const spruesEnabled = document.getElementById('enable-sprues').checked;
             const userScale = parseFloat(document.getElementById('svg-scale').value);
 
@@ -335,7 +326,7 @@
             const frameGeo = new THREE.ExtrudeGeometry(frameShape, { depth: thickness, bevelEnabled: false });
             mainMeshGroup.add(new THREE.Mesh(frameGeo, matFrame));
 
-            // 2. Renderizar Letras o SVG + Conectores Automáticos
+            // 2. Renderizar Contenido
             if (mode === 'text' && loadedFont) {
                 const textVal = document.getElementById('input-text').value.toUpperCase() || "MAKER";
                 const letterCount = textVal.length;
@@ -364,8 +355,8 @@
                     textMesh.position.set(posX, posY, 0);
                     mainMeshGroup.add(textMesh);
 
-                    // --- GENERACIÓN AUTOMÁTICA DE CONECTORES PARA CADA LETRA ---
-                    if (spruesEnabled && (sprueMode === 'auto' || sprueMode === 'both')) {
+                    // Pestañas verticales ajustadas exactas por letra
+                    if (spruesEnabled) {
                         const sprueTopH = (innerH / 2) - (posY + charH);
                         const sprueBotH = (posY) - (-innerH / 2);
 
@@ -382,9 +373,24 @@
                 });
 
             } else if (mode === 'svg' && currentSVGShapes && currentSVGShapes.length > 0) {
-                const svgGeo = new THREE.ExtrudeGeometry(currentSVGShapes, { depth: thickness, bevelEnabled: false });
-                svgGeo.computeBoundingBox();
-                const bbox = svgGeo.boundingBox;
+                
+                // Múltiples piezas dentro del SVG
+                currentSVGShapes.forEach(shape => {
+                    const singleGeo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
+                    singleGeo.computeBoundingBox();
+                    const bbox = singleGeo.boundingBox;
+                    
+                    if (!bbox) return;
+
+                    const size = new THREE.Vector3();
+                    bbox.getSize(size);
+
+                    // Normalizar e importar SVG completo
+                });
+
+                const fullSvgGeo = new THREE.ExtrudeGeometry(currentSVGShapes, { depth: thickness, bevelEnabled: false });
+                fullSvgGeo.computeBoundingBox();
+                const bbox = fullSvgGeo.boundingBox;
                 const center = new THREE.Vector3();
                 bbox.getCenter(center);
                 const size = new THREE.Vector3();
@@ -394,37 +400,43 @@
                 const maxAllowedH = innerH - 10;
                 const scaleFactor = Math.min(maxAllowedW / size.x, maxAllowedH / size.y) * userScale;
 
-                const svgMesh = new THREE.Mesh(svgGeo, matPart);
+                const svgMesh = new THREE.Mesh(fullSvgGeo, matPart);
                 svgMesh.scale.set(scaleFactor, -scaleFactor, 1);
                 svgMesh.position.set(-center.x * scaleFactor, center.y * scaleFactor, 0);
                 mainMeshGroup.add(svgMesh);
 
-                // --- GENERACIÓN AUTOMÁTICA DE CONECTORES PARA SVG ---
-                if (spruesEnabled && (sprueMode === 'auto' || sprueMode === 'both')) {
-                    const sprueH = (innerH - (size.y * scaleFactor)) / 2;
-                    const sprueVGeo = new THREE.BoxGeometry(sprueW, sprueH + 2, sprueZHeight);
-                    
-                    const topSprue = new THREE.Mesh(sprueVGeo, matSprue);
-                    topSprue.position.set(0, innerH / 2 - sprueH / 2, sprueZHeight / 2);
+                // --- CONECTORES EXACTOS PARA SVG COMPLEJO ---
+                if (spruesEnabled) {
+                    const topEdgeSVG = (size.y / 2) * scaleFactor;
+                    const botEdgeSVG = (-size.y / 2) * scaleFactor;
+
+                    const distTopFrame = (innerH / 2) - topEdgeSVG;
+                    const distBotFrame = (-innerH / 2) - botEdgeSVG;
+
+                    // Pestaña superior exacta que toca la pieza
+                    const topSprueGeo = new THREE.BoxGeometry(sprueW, Math.max(distTopFrame + 2, 2), sprueZHeight);
+                    const topSprue = new THREE.Mesh(topSprueGeo, matSprue);
+                    topSprue.position.set(0, innerH / 2 - distTopFrame / 2, sprueZHeight / 2);
                     mainMeshGroup.add(topSprue);
 
-                    const botSprue = new THREE.Mesh(sprueVGeo, matSprue);
-                    botSprue.position.set(0, -innerH / 2 + sprueH / 2, sprueZHeight / 2);
+                    // Pestaña inferior exacta que toca la pieza
+                    const botSprueGeo = new THREE.BoxGeometry(sprueW, Math.max(Math.abs(distBotFrame) + 2, 2), sprueZHeight);
+                    const botSprue = new THREE.Mesh(botSprueGeo, matSprue);
+                    botSprue.position.set(0, -innerH / 2 + Math.abs(distBotFrame) / 2, sprueZHeight / 2);
                     mainMeshGroup.add(botSprue);
                 }
             }
 
-            // --- RED DE CONECTORES EN CRUZ (MODO RED O HÍBRIDO) ---
-            if (spruesEnabled && (sprueMode === 'cross' || sprueMode === 'both')) {
-                const crossGeoH = new THREE.BoxGeometry(innerW + 2, sprueW, sprueZHeight);
-                const crossMeshH = new THREE.Mesh(crossGeoH, matSprue);
-                crossMeshH.position.set(0, 0, sprueZHeight / 2);
-                mainMeshGroup.add(crossMeshH);
-
-                const crossGeoV = new THREE.BoxGeometry(sprueW, innerH + 2, sprueZHeight);
-                const crossMeshV = new THREE.Mesh(crossGeoV, matSprue);
-                crossMeshV.position.set(0, 0, sprueZHeight / 2);
-                mainMeshGroup.add(crossMeshV);
+            // --- PUENTES HORIZONTALES DE UNIÓN ENTRE PIEZAS SUELTAS ---
+            if (spruesEnabled && horizBridges > 0) {
+                const spacingY = innerH / (horizBridges + 1);
+                for (let i = 1; i <= horizBridges; i++) {
+                    const bridgeY = -innerH / 2 + spacingY * i;
+                    const bridgeGeo = new THREE.BoxGeometry(innerW + 2, sprueW, sprueZHeight);
+                    const bridgeMesh = new THREE.Mesh(bridgeGeo, matSprue);
+                    bridgeMesh.position.set(0, bridgeY, sprueZHeight / 2);
+                    mainMeshGroup.add(bridgeMesh);
+                }
             }
         }
 
