@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Card Kits 3D (SVG y Letras)</title>
+    <title>Generador de Card Kits 3D v2.5.0</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js y dependencias -->
@@ -29,7 +29,7 @@
         <header class="p-4 flex justify-between items-center glass-panel pointer-events-auto border-b border-slate-700">
             <div class="flex items-center space-x-3">
                 <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg">CK</div>
-                <h1 class="text-xl font-bold tracking-wide text-white">Generador de Card Kits 3D <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded border border-blue-500/30">SVG & Paramétrico</span></h1>
+                <h1 class="text-xl font-bold tracking-wide text-white">Generador de Card Kits 3D <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">v2.5.0 - Análisis Smart</span></h1>
             </div>
             <div class="flex space-x-3">
                 <button id="btn-export-stl" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition-all text-sm flex items-center space-x-2">
@@ -95,10 +95,10 @@
                     </div>
                 </div>
 
-                <!-- CONECTORES INTELIGENTES POR FORMA/ISLA -->
+                <!-- CONECTORES INTELIGENTES -->
                 <div class="space-y-4 border-t border-slate-700/60 pt-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Análisis de Conectores</h3>
+                        <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Conectores Precisos</h3>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="enable-sprues" checked class="sr-only peer">
                             <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
@@ -119,6 +119,11 @@
                         <div class="flex items-center justify-between pt-1">
                             <span class="text-xs text-slate-300">Conectar Letras Entre Sí</span>
                             <input type="checkbox" id="connect-neighbors" checked class="accent-blue-600 rounded">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs text-slate-300 mb-1"><span>Alcance de Unión Horizontal</span><span id="val-bridge-gap">25 mm</span></div>
+                            <input type="range" id="bridge-gap" min="5" max="60" value="25" class="w-full">
                         </div>
 
                         <div>
@@ -149,7 +154,7 @@
             <div class="self-end glass-panel rounded-xl p-4 pointer-events-auto text-xs text-slate-300 space-y-1">
                 <div><span class="text-slate-400">Dimensiones Totales:</span> <span id="spec-dim">160 x 80 x 2.0 mm</span></div>
                 <div><span class="text-slate-400">Modo:</span> <span id="spec-mode">Texto Paramétrico</span></div>
-                <div><span class="text-slate-400">Conectores:</span> <span id="spec-sprues" class="text-emerald-400">Análisis Activo</span></div>
+                <div><span class="text-slate-400">Conectores:</span> <span id="spec-sprues" class="text-emerald-400">Smart V2.5</span></div>
                 <div><span class="text-slate-400">Tiempo estimado:</span> <span class="text-emerald-400">~35 mins</span></div>
             </div>
         </div>
@@ -231,7 +236,7 @@
                 updateModel();
             });
 
-            const inputs = ['card-w', 'card-h', 'thickness', 'border-w', 'sprue-w', 'sprue-depth', 'connect-neighbors', 'svg-scale', 'input-text', 'color-frame', 'color-part', 'enable-sprues'];
+            const inputs = ['card-w', 'card-h', 'thickness', 'border-w', 'sprue-w', 'sprue-depth', 'connect-neighbors', 'bridge-gap', 'svg-scale', 'input-text', 'color-frame', 'color-part', 'enable-sprues'];
             inputs.forEach(id => {
                 document.getElementById(id).addEventListener('input', () => {
                     syncLabels();
@@ -251,13 +256,14 @@
             document.getElementById('val-border').textContent = document.getElementById('border-w').value + ' mm';
             document.getElementById('val-sprue-w').textContent = parseFloat(document.getElementById('sprue-w').value).toFixed(1) + ' mm';
             document.getElementById('val-sprue-depth').textContent = document.getElementById('sprue-depth').value + '%';
+            document.getElementById('val-bridge-gap').textContent = document.getElementById('bridge-gap').value + ' mm';
             document.getElementById('val-svg-scale').textContent = parseFloat(document.getElementById('svg-scale').value).toFixed(2);
             document.getElementById('spec-dim').textContent = `${document.getElementById('card-w').value} x ${document.getElementById('card-h').value} x ${document.getElementById('thickness').value} mm`;
 
             const spruesEnabled = document.getElementById('enable-sprues').checked;
             document.getElementById('sprue-controls').style.opacity = spruesEnabled ? "1" : "0.4";
             document.getElementById('sprue-controls').style.pointerEvents = spruesEnabled ? "auto" : "none";
-            document.getElementById('spec-sprues').textContent = spruesEnabled ? "Análisis Activo" : "Desactivados";
+            document.getElementById('spec-sprues').textContent = spruesEnabled ? "Smart V2.5" : "Desactivados";
             document.getElementById('spec-sprues').className = spruesEnabled ? "text-emerald-400" : "text-amber-400";
         }
 
@@ -300,6 +306,7 @@
             const borderW = parseFloat(document.getElementById('border-w').value);
             const sprueW = parseFloat(document.getElementById('sprue-w').value);
             const sprueDepthPct = parseFloat(document.getElementById('sprue-depth').value) / 100;
+            const maxBridgeGap = parseFloat(document.getElementById('bridge-gap').value);
             const connectNeighbors = document.getElementById('connect-neighbors').checked;
             const spruesEnabled = document.getElementById('enable-sprues').checked;
             const userScale = parseFloat(document.getElementById('svg-scale').value);
@@ -332,10 +339,9 @@
             const frameGeo = new THREE.ExtrudeGeometry(frameShape, { depth: thickness, bevelEnabled: false });
             mainMeshGroup.add(new THREE.Mesh(frameGeo, matFrame));
 
-            // Lista para almacenar el Bounding Box de cada isla/forma analizada
             let subIslands = [];
 
-            // 2. Renderizar Texto
+            // 2. Renderizar Contenido (Texto o SVG)
             if (mode === 'text' && loadedFont) {
                 const textVal = document.getElementById('input-text').value.toUpperCase() || "MAKER";
                 const letterCount = textVal.length;
@@ -375,7 +381,7 @@
                 });
 
             } else if (mode === 'svg' && currentSVGShapes && currentSVGShapes.length > 0) {
-                // Renderizar y Analizar Forma SVG por Forma/Isla
+                
                 const fullSvgGeo = new THREE.ExtrudeGeometry(currentSVGShapes, { depth: thickness, bevelEnabled: false });
                 fullSvgGeo.computeBoundingBox();
                 const bbox = fullSvgGeo.boundingBox;
@@ -393,14 +399,13 @@
                 svgMesh.position.set(-center.x * scaleFactor, center.y * scaleFactor, 0);
                 mainMeshGroup.add(svgMesh);
 
-                // Analizar cada Shape (sub-isla o letra dentro del SVG)
+                // Analizar cada trazo individual del SVG
                 currentSVGShapes.forEach((shape) => {
                     const singleGeo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
                     singleGeo.computeBoundingBox();
                     const sBox = singleGeo.boundingBox;
                     if (!sBox) return;
 
-                    // Mapear coordenadas con la escala y posición del contenedor
                     const minX = (sBox.min.x - center.x) * scaleFactor;
                     const maxX = (sBox.max.x - center.x) * scaleFactor;
                     const minY = -(sBox.max.y - center.y) * scaleFactor;
@@ -417,17 +422,16 @@
                 });
             }
 
-            // 3. GENERACIÓN INTELIGENTE DE CONECTORES POR ISLA / LETRA
+            // 3. CÁLCULO DE CONECTORES INTELIGENTES
             if (spruesEnabled && subIslands.length > 0) {
                 
-                // A) Pestañas verticales inteligentes desde cada letra/isla hacia el marco
+                // Conectores hacia el marco superior e inferior por cada isla
                 subIslands.forEach((isl) => {
-                    // Pestaña Superior
                     const topDist = (innerH / 2) - isl.maxY;
-                    if (topDist > 0) {
+                    if (topDist > 0 && topDist < innerH) {
                         mainMeshGroup.add(createSprueMesh(
                             sprueW,
-                            topDist + 1,
+                            topDist + 1.5,
                             sprueZHeight,
                             isl.centerX,
                             innerH / 2 - topDist / 2,
@@ -436,12 +440,11 @@
                         ));
                     }
 
-                    // Pestaña Inferior
                     const botDist = isl.minY - (-innerH / 2);
-                    if (botDist > 0) {
+                    if (botDist > 0 && botDist < innerH) {
                         mainMeshGroup.add(createSprueMesh(
                             sprueW,
-                            botDist + 1,
+                            botDist + 1.5,
                             sprueZHeight,
                             isl.centerX,
                             -innerH / 2 + botDist / 2,
@@ -451,9 +454,8 @@
                     }
                 });
 
-                // B) Conectar letras/islas vecinas entre sí (Horizontalmente)
+                // Puentes horizontales inter-letras
                 if (connectNeighbors && subIslands.length > 1) {
-                    // Ordenar islas de izquierda a derecha
                     subIslands.sort((a, b) => a.minX - b.minX);
 
                     for (let i = 0; i < subIslands.length - 1; i++) {
@@ -461,10 +463,10 @@
                         const next = subIslands[i + 1];
 
                         const gap = next.minX - curr.maxX;
-                        if (gap > 0 && gap < innerW * 0.4) {
+                        if (gap > 0 && gap <= maxBridgeGap) {
                             const bridgeY = (curr.centerY + next.centerY) / 2;
                             mainMeshGroup.add(createSprueMesh(
-                                gap + 1,
+                                gap + 1.5,
                                 sprueW,
                                 sprueZHeight,
                                 curr.maxX + gap / 2,
@@ -498,7 +500,7 @@
             const spruesEnabled = document.getElementById('enable-sprues').checked;
             const textVal = document.getElementById('input-text').value;
 
-            const scadCode = `// --- GENERADO CON CARD KIT GENERATOR 3D ---
+            const scadCode = `// --- GENERADO CON CARD KIT GENERATOR 3D v2.5.0 ---
 card_width = ${cardW};
 card_height = ${cardH};
 thickness = ${thickness};
